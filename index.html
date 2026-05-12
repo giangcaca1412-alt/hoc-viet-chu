@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tập Viết Chữ Hán - Giang</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-indigo-50 min-h-screen flex flex-col items-center py-6 px-4">
+    <h1 class="text-2xl font-black text-indigo-900 mb-6 uppercase tracking-widest">Tập Viết Chữ Hán</h1>
+    
+    <label class="bg-white border-2 border-indigo-600 text-indigo-700 px-8 py-3 rounded-2xl cursor-pointer shadow-lg active:scale-95 transition-all mb-4 font-bold">
+        <i class="fas fa-file-excel mr-2 text-green-500"></i> NHẬP FILE EXCEL
+        <input type="file" id="upload" accept=".xlsx" class="hidden">
+    </label>
+
+    <div id="counter" class="mb-4 text-indigo-800 font-bold bg-indigo-200 px-4 py-1 rounded-full text-sm italic">Sẵn sàng học bài!</div>
+
+    <div class="bg-white p-6 rounded-[2.5rem] shadow-2xl flex flex-col items-center w-full max-w-sm border-4 border-white ring-4 ring-indigo-100">
+        <!-- Khung hiện chữ -->
+        <div id="character-target" class="bg-slate-50 rounded-3xl mb-4 border-2 border-dashed border-indigo-200 shadow-inner"></div>
+        
+        <div id="pinyin-display" class="text-3xl text-indigo-600 font-black mb-1">Pinyin</div>
+        <div id="meaning-display" class="text-xl text-slate-500 italic mb-6">Nghĩa từ</div>
+
+        <div class="flex gap-4">
+            <button onclick="writer.animateCharacter()" class="bg-amber-500 text-white px-8 py-3 rounded-2xl font-bold shadow-lg active:scale-90">
+                <i class="fas fa-magic mr-2"></i> VIẾT LẠI
+            </button>
+            <button onclick="speak()" class="bg-sky-500 text-white px-8 py-3 rounded-2xl font-bold shadow-lg active:scale-90">
+                <i class="fas fa-volume-up mr-2"></i> NGHE
+            </button>
+        </div>
+    </div>
+
+    <div class="flex gap-4 mt-8 w-full max-w-sm">
+        <button onclick="prev()" class="flex-1 bg-white border-2 border-indigo-200 text-indigo-400 font-bold py-5 rounded-3xl active:scale-95 shadow-sm uppercase text-sm">Từ trước</button>
+        <button onclick="next()" class="flex-2 bg-indigo-600 text-white font-bold py-5 px-10 rounded-3xl shadow-xl active:scale-95 uppercase">Từ tiếp theo</button>
+    </div>
+
+    <script>
+        let words = []; let i = 0; let writer;
+        document.getElementById('upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
+                words = json.slice(1).map(row => ({ 
+                    h: row[0] ? row[0].toString() : "", 
+                    p: row[1] ? row[1].toString() : "", 
+                    m: row[2] ? row[2].toString() : "" 
+                })).filter(item => item.h !== "");
+                i = 0; if(words.length > 0) updateUI();
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function updateUI() {
+            const rawChar = words[i].h.trim();
+            const char = rawChar.charAt(0); // Lấy chữ đầu tiên để dạy viết
+            document.getElementById('counter').innerText = `Từ số: ${i + 1} / ${words.length}`;
+            document.getElementById('pinyin-display').innerText = words[i].p;
+            document.getElementById('meaning-display').innerText = words[i].m;
+            document.getElementById('character-target').innerHTML = '';
+            
+            writer = HanziWriter.create('character-target', char, {
+                width: 260, height: 260, padding: 20, strokeAnimationSpeed: 1, 
+                delayBetweenStrokes: 200, strokeColor: '#4338ca', showOutline: true, outlineColor: '#f1f5f9'
+            });
+            writer.animateCharacter();
+        }
+
+        function next() { if (words.length === 0) return; i = (i + 1) % words.length; updateUI(); }
+        function prev() { if (words.length === 0) return; i = (i - 1 + words.length) % words.length; updateUI(); }
+        function speak() {
+            if (words.length === 0) return;
+            const msg = new SpeechSynthesisUtterance(words[i].h);
+            msg.lang = 'zh-CN';
+            window.speechSynthesis.speak(msg);
+        }
+    </script>
+</body>
+</html>
+  
